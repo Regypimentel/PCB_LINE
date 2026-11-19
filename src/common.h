@@ -1,5 +1,4 @@
 #ifndef COMMON_H
-#define FIFO_OVEN_AOI "/tmp/pcbline_oven_aoi.fifo"
 #define COMMON_H
 #define _GNU_SOURCE
 #include <stdio.h>
@@ -17,12 +16,13 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#define MQ_NAME  "/pcb_mq"
-#define SHM_NAME "/pcb_shm"
+#define MQ_NAME   "/pcb_mq"
+#define SHM_NAME  "/pcb_shm"
+#define FIFO_PATH "/tmp/pcb_oven_aoi.fifo"
 
 #define LOG(tag, fmt, ...) printf("[%-10s] " fmt "\n", tag, ##__VA_ARGS__)
 
-/* Placa em producao: trafega pela fila de mensagens e pelo pipe */
+/* Placa em producao: trafega pela fila de mensagens e pelo FIFO */
 typedef struct {
     int id;
     int components;
@@ -52,6 +52,6 @@ extern config_t cfg;
 extern stats_t *g_stats;
 
 void run_placement(void);
-void run_oven(int pipe_wr);
-void run_inspect(int pipe_rd);
+void run_oven(void);
+void run_inspect(void);
 #endif

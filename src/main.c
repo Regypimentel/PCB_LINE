@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IOLBF, 0);
 
     /* --- memoria compartilhada + mutex process-shared --- */
-    shm_unlink(SHM_NAME); mq_unlink(MQ_NAME);
+    shm_unlink(SHM_NAME); mq_unlink(MQ_NAME); unlink(FIFO_PATH);
     int fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0600);
     if (fd < 0 || ftruncate(fd, sizeof(stats_t)) < 0) { perror("shm"); return 1; }
     g_stats = mmap(NULL, sizeof(stats_t), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -51,9 +51,8 @@ int main(int argc, char **argv) {
     if (mq == (mqd_t)-1) { perror("mq_open"); return 1; }
     mq_close(mq);
 
-    /* --- pipe anonimo forno -> AOI --- */
-    int pfd[2];
-    if (pipe(pfd) < 0) { perror("pipe"); return 1; }
+    /* --- FIFO (named pipe) forno -> AOI --- */
+    if (mkfifo(FIFO_PATH, 0666) < 0) { perror("mkfifo"); return 1; }
 
     /* --- sinais --- */
     struct sigaction sa = {0};
@@ -65,10 +64,9 @@ int main(int argc, char **argv) {
         cfg.boards, cfg.comps, cfg.feeders, cfg.heads, cfg.race ? " | MODO RACE" : "");
 
     pid_t pids[3];
-    if ((pids[0] = fork()) == 0) { close(pfd[0]); close(pfd[1]); run_placement(); _exit(0); }
-    if ((pids[1] = fork()) == 0) { close(pfd[0]); run_oven(pfd[1]); _exit(0); }
-    if ((pids[2] = fork()) == 0) { close(pfd[1]); run_inspect(pfd[0]); _exit(0); }
-    close(pfd[0]); close(pfd[1]);
+    if ((pids[0] = fork()) == 0) { run_placement(); _exit(0); }
+    if ((pids[1] = fork()) == 0) { run_oven(); _exit(0); }
+    if ((pids[2] = fork()) == 0) { run_inspect(); _exit(0); }
 
     int alive = 3;
     while (alive > 0) {
@@ -111,5 +109,6 @@ int main(int argc, char **argv) {
     munmap(g_stats, sizeof(stats_t));
     shm_unlink(SHM_NAME);
     mq_unlink(MQ_NAME);
+    unlink(FIFO_PATH);
     return 0;
 }

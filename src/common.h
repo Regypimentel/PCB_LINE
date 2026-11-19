@@ -1,4 +1,5 @@
 #ifndef COMMON_H
+#define FIFO_OVEN_AOI "/tmp/pcbline_oven_aoi.fifo"
 #define COMMON_H
 #define _GNU_SOURCE
 #include <stdio.h>
